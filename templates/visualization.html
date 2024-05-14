@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictions Visualization</title>
+  <!-- Include Moment.js library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <!-- Include Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Include Moment.js adapter for Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+</head>
+<body>
+  <div style="width: 800px; margin: 0 auto;">
+    <!-- Chart.js canvas -->
+    <canvas id="predictions-chart"></canvas>
+  </div>
+
+  <script>
+    // Fetch predictions data from Flask server
+    fetch('/predict', {
+      method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Extract data from JSON
+      const dsValues = Object.values(data.ds);
+      const labels = dsValues.map((value, index) => moment(value)); // Dates as labels using Moment.js
+      const predictions = Object.values(data.yhat);
+
+      // Create Chart.js chart
+      const ctx = document.getElementById('predictions-chart').getContext('2d');
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Predicted Values',
+            data: predictions,
+            borderColor: 'rgb(75, 192, 192)',
+            borderWidth: 1,
+            fill: false
+          }]
+        },
+        options: {
+          scales: {
+            x: {
+              type: 'time', // Specify x-axis as time
+              time: {
+                min: moment('2011-01-01'), // Minimum date using Moment.js
+                max: moment('2026-12-31'), // Maximum date using Moment.js
+                unit: 'year', // Display units by year
+                displayFormats: {
+                  year: 'YYYY' // Date format
+                }
+              }
+            },
+            y: {
+              // Add any y-axis options here
+            }
+          }
+        }
+      });
+    })
+    .catch(error => console.error('Error fetching predictions:', error));
+  </script>
+</body>
+</html>

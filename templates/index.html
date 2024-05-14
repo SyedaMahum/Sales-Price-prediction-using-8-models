@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ 
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Predictions Visualization</title>
+        <!-- Include Moment.js library -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+        <!-- Include Chart.js library -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <!-- Include Moment.js adapter for Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+     
+    <title>Forecasting</title>
+</head>
+<body>
+    <h1>Forecasting</h1>
+    <button id="arimaButton">Generate ARIMA Forecast</button>
+    <button id="sarimaButton">Generate SARIMA Forecast</button>
+    <button id="svrButton">Generate SVR Forecast</button>
+    <button id="etsButton">Generate ETS Forecast</button>
+    <button id="annButton">Generate ANN Forecast</button>
+    <button id="hybridButton">Generate HYBRID Forecast</button>
+    <button id="lstmButton">Generate LSTM Forecast</button>
+    
+    <button id="prophetButton">Generate Prophet Forecast</button> 
+    <form id="modelFormProphet" action="/predict" method="post">
+     
+        <input type="hidden" id="selectedModelProphet" name="model" value="">
+    </form>
+    <div id="imageContainer"></div>
+    
+    <div id="plot"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+
+        // Function to fetch data and plot the graph for ARIMA
+        function generateARIMAForecast() {
+            
+            // Fetch data from Flask backend
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    // Data received, plot with D3.js
+                    const actualValues = data.actual;
+                    const predictedValues = data.predicted;
+                    // Remove any existing plot
+                    d3.select("#plot").selectAll("*").remove();
+                    // Define dimensions and margins for the plot
+                    const width = 600;
+                    const height = 400;
+                    const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+
+                    // Create SVG element
+                    const svg = d3.select('#plot')
+                        .append('svg')
+                        .attr('width', width)
+                        .attr('height', height)
+                        .call(d3.zoom().on("zoom", function () {
+                            svg.attr("transform", d3.event.transform);
+                        }))
+                        .append("g");
+
+                    // Create scales for x and y axes
+                    const xScale = d3.scaleLinear()
+                        .domain([0, actualValues.length - 1])
+                        .range([margin.left, width - margin.right]);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max([...actualValues, ...predictedValues])])
+                        .range([height - margin.bottom, margin.top]);
+
+                    // Create x and y axes
+                    const xAxis = d3.axisBottom().scale(xScale);
+                    const yAxis = d3.axisLeft().scale(yScale);
+
+                    // Draw x axis
+                    svg.append('g')
+                        .attr('transform', `translate(0, ${height - margin.bottom})`)
+                        .call(xAxis);
+
+                    // Draw y axis
+                    svg.append('g')
+                        .attr('transform', `translate(${margin.left}, 0)`)
+                        .call(yAxis);
+
+                    // Create line generator for actual values
+                    const lineActual = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Create line generator for predicted values
+                    const linePredicted = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Draw actual line
+                    svg.append('path')
+                        .datum(actualValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'steelblue')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', lineActual)
+                        .transition()
+                        .duration(1000)
+                        .attrTween("d", function () {
+                            var length = this.getTotalLength();
+                            return function (t) { return lineActual(actualValues.slice(0, Math.round(t * (actualValues.length - 1)))); };
+                        });
+
+                    // Draw predicted line
+                    svg.append('path')
+                        .datum(predictedValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'red')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', linePredicted)
+                        .transition()
+                        .duration(1000)
+                        .attrTween("d", function () {
+                            var length = this.getTotalLength();
+                            return function (t) { return linePredicted(predictedValues.slice(0, Math.round(t * (predictedValues.length - 1)))); };
+                        });
+
+                        d3.select("#imageContainer").selectAll("*").remove();
+                        var img = document.createElement("img");
+
+        // Set the source attribute to the URL of the image
+        img.src = "static/arima.jpg"; // Use forward slash here
+
+        // Set any additional attributes such as alt text
+        img.alt = "Image";
+
+        // Append the <img> element to a container in the HTML document
+        var container = document.getElementById("imageContainer");
+        container.appendChild(img);
+                        
+                });
+        }
+
+        // Function to fetch data and plot the graph for SARIMA
+        function generateSARIMAForecast() {
+            // Fetch data from Flask backend
+            fetch('/sarima_data')
+                .then(response => response.json())
+                .then(data => {
+                    // Data received, plot with D3.js
+                    const actualValues = data.actual;
+                    const predictedValues = data.predicted;
+                    // Remove any existing plot
+                d3.select("#plot").selectAll("*").remove();
+
+                    // Define dimensions and margins for the plot
+                    const width = 600;
+                    const height = 400;
+                    const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+
+                    // Create SVG element
+                    const svg = d3.select('#plot')
+                        .append('svg')
+                        .attr('width', width)
+                        .attr('height', height)
+                        .call(d3.zoom().on("zoom", function () {
+                            svg.attr("transform", d3.event.transform);
+                        }))
+                        .append("g");
+
+                    // Create scales for x and y axes
+                    const xScale = d3.scaleLinear()
+                        .domain([0, actualValues.length - 1])
+                        .range([margin.left, width - margin.right]);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max([...actualValues, ...predictedValues])])
+                        .range([height - margin.bottom, margin.top]);
+
+                    // Create x and y axes
+                    const xAxis = d3.axisBottom().scale(xScale);
+                    const yAxis = d3.axisLeft().scale(yScale);
+
+                    // Draw x axis
+                    svg.append('g')
+                        .attr('transform', `translate(0, ${height - margin.bottom})`)
+                        .call(xAxis);
+
+                    // Draw y axis
+                    svg.append('g')
+                        .attr('transform', `translate(${margin.left}, 0)`)
+                        .call(yAxis);
+
+                    // Create line generator for actual values
+                    const lineActual = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Create line generator for predicted values
+                    const linePredicted = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Draw actual line
+                    svg.append('path')
+                        .datum(actualValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'steelblue')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', lineActual)
+                        .transition()
+                        .duration(1000)
+                        .attrTween("d", function () {
+                            var length = this.getTotalLength();
+                            return function (t) { return lineActual(actualValues.slice(0, Math.round(t * (actualValues.length - 1)))); };
+                        });
+
+                    // Draw predicted line
+                    svg.append('path')
+                        .datum(predictedValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'red')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', linePredicted)
+                        .transition()
+                        .duration(1000)
+                        .attrTween("d", function () {
+                            var length = this.getTotalLength();
+                            return function (t) { return linePredicted(predictedValues.slice(0, Math.round(t * (predictedValues.length - 1)))); };
+                        });
+                        d3.select("#imageContainer").selectAll("*").remove();
+                        var img = document.createElement("img");
+
+// Set the source attribute to the URL of the image
+img.src = "static/sarima.jpg"; // Use forward slash here
+
+// Set any additional attributes such as alt text
+img.alt = "Image";
+
+// Append the <img> element to a container in the HTML document
+var container = document.getElementById("imageContainer");
+container.appendChild(img);
+                
+        });
+                   
+            
+        }
+
+        function generateANNForecast() {
+        // Create an <img> element
+        d3.select("#plot").selectAll("*").remove();
+
+        d3.select("#imageContainer").selectAll("*").remove();
+        var img = document.createElement("img");
+
+        // Set the source attribute to the URL of the image
+        img.src = "static/ann.jpg"; // Use forward slash here
+
+        // Set any additional attributes such as alt text
+        img.alt = "Image";
+
+        // Append the <img> element to a container in the HTML document
+        var container = document.getElementById("imageContainer");
+        container.appendChild(img);
+    }
+
+    function generateHYBRIDForecast() {
+        // Create an <img> element
+        d3.select("#plot").selectAll("*").remove();
+
+        d3.select("#imageContainer").selectAll("*").remove();
+        var img = document.createElement("img");
+
+        // Set the source attribute to the URL of the image
+        img.src = "static/hybrid.jpg"; // Use forward slash here
+
+        // Set any additional attributes such as alt text
+        img.alt = "Image";
+
+        // Append the <img> element to a container in the HTML document
+        var container = document.getElementById("imageContainer");
+        container.appendChild(img);
+    }
+
+    function generateLSTMForecast() {
+        // Create an <img> element
+        d3.select("#plot").selectAll("*").remove();
+
+        d3.select("#imageContainer").selectAll("*").remove();
+        var img = document.createElement("img");
+
+        // Set the source attribute to the URL of the image
+        img.src = "static/lstm.jpg"; // Use forward slash here
+
+        // Set any additional attributes such as alt text
+        img.alt = "Image";
+
+        // Append the <img> element to a container in the HTML document
+        var container = document.getElementById("imageContainer");
+        container.appendChild(img);
+    }
+
+     
+
+        // Function to fetch data and plot the graph for SVR
+        function generateSVRForecast() {
+            
+            // Fetch data from Flask backend
+            fetch('/svr_data')
+                .then(response => response.json())
+                .then(data => {
+                    // Data received, plot with D3.js
+                    const actualValues = data.actual;
+                    const predictedValues = data.predicted;
+
+                    // Remove any existing plot
+                    d3.select("#plot").selectAll("*").remove();
+
+                    // Define dimensions and margins for the plot
+                    const width = 600;
+                    const height = 400;
+                    const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+
+                    // Create SVG element
+                    const svg = d3.select('#plot')
+                        .append('svg')
+                        .attr('width', width)
+                        .attr('height', height);
+
+                    // Create scales for x and y axes
+                    const xScale = d3.scaleLinear()
+                        .domain([0, actualValues.length - 1])
+                        .range([margin.left, width - margin.right]);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max([...actualValues, ...predictedValues])])
+                        .range([height - margin.bottom, margin.top]);
+
+                    // Create x and y axes
+                    const xAxis = d3.axisBottom().scale(xScale);
+                    const yAxis = d3.axisLeft().scale(yScale);
+
+                    // Draw x axis
+                    svg.append('g')
+                        .attr('transform', `translate(0, ${height - margin.bottom})`)
+                        .call(xAxis);
+
+                    // Draw y axis
+                    svg.append('g')
+                        .attr('transform', `translate(${margin.left}, 0)`)
+                        .call(yAxis);
+
+                    // Create line generator for actual values
+                    const lineActual = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Create line generator for predicted values
+                    const linePredicted = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Draw actual line with transition
+                    svg.append('path')
+                        .datum(actualValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'steelblue')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', lineActual)
+                        .transition()
+                        .duration(1000)
+                        .attrTween("d", function () {
+                            var length = this.getTotalLength();
+                            return function (t) { return lineActual(actualValues.slice(0, Math.round(t * (actualValues.length - 1)))); };
+                        });
+
+                    // Draw predicted line with transition
+                    svg.append('path')
+                        .datum(predictedValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'red')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', linePredicted)
+                        .transition()
+                        .duration(1000)
+                        .attrTween("d", function () {
+                            var length = this.getTotalLength();
+                            return function (t) { return linePredicted(predictedValues.slice(0, Math.round(t * (predictedValues.length - 1)))); };
+                        });
+                        d3.select("#imageContainer").selectAll("*").remove();
+                        var img = document.createElement("img");
+
+// Set the source attribute to the URL of the image
+img.src = "static/svr.jpg"; // Use forward slash here
+
+// Set any additional attributes such as alt text
+img.alt = "Image";
+
+// Append the <img> element to a container in the HTML document
+var container = document.getElementById("imageContainer");
+container.appendChild(img);
+                
+        });
+             
+
+        }
+
+        function generateETSForecast() {
+         
+        // Fetch data from Flask backend
+        fetch('/ets_data')
+            .then(response => response.json())
+            .then(data => {
+                // Data received, plot with D3.js
+                const actualValues = data.actual;
+                const predictedValues = data.predicted;
+
+                // Define dimensions and margins for the plot
+                const width = 600;
+                const height = 400;
+                const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+
+                // Remove any existing plot
+                d3.select("#plot").selectAll("*").remove();
+
+                // Create SVG element
+                const svg = d3.select('#plot')
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height);
+
+                // Create scales for x and y axes
+                const xScale = d3.scaleLinear()
+                    .domain([0, actualValues.length - 1])
+                    .range([margin.left, width - margin.right]);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max([...actualValues, ...predictedValues])])
+                    .range([height - margin.bottom, margin.top]);
+
+                // Create x and y axes
+                const xAxis = d3.axisBottom().scale(xScale);
+                const yAxis = d3.axisLeft().scale(yScale);
+
+                // Draw x axis
+                svg.append('g')
+                    .attr('transform', `translate(0, ${height - margin.bottom})`)
+                    .call(xAxis);
+
+                // Draw y axis
+                svg.append('g')
+                    .attr('transform', `translate(${margin.left}, 0)`)
+                    .call(yAxis);
+
+                // Create line generator for actual values
+                const lineActual = d3.line()
+                    .x((d, i) => xScale(i))
+                    .y(d => yScale(d));
+
+                // Create line generator for predicted values
+                const linePredicted = d3.line()
+                    .x((d, i) => xScale(i))
+                    .y(d => yScale(d));
+
+                // Draw actual line with transition
+                svg.append('path')
+                    .datum(actualValues)
+                    .attr('fill', 'none')
+                    .attr('stroke', 'steelblue')
+                    .attr('stroke-width', 1.5)
+                    .attr('d', lineActual)
+                    .transition()
+                    .duration(1000)
+                    .attrTween("d", function () {
+                        var length = this.getTotalLength();
+                        return function (t) { return lineActual(actualValues.slice(0, Math.round(t * (actualValues.length - 1)))); };
+                    });
+
+                // Draw predicted line with transition
+                svg.append('path')
+                    .datum(predictedValues)
+                    .attr('fill', 'none')
+                    .attr('stroke', 'red')
+                    .attr('stroke-width', 1.5)
+                    .attr('d', linePredicted)
+                    .transition()
+                    .duration(1000)
+                    .attrTween("d", function () {
+                        var length = this.getTotalLength();
+                        return function (t) { return linePredicted(predictedValues.slice(0, Math.round(t * (predictedValues.length - 1)))); };
+                    });
+                    d3.select("#imageContainer").selectAll("*").remove();
+                    var img = document.createElement("img");
+
+// Set the source attribute to the URL of the image
+img.src = "static/ets.jpg"; // Use forward slash here
+
+// Set any additional attributes such as alt text
+img.alt = "Image";
+
+// Append the <img> element to a container in the HTML document
+var container = document.getElementById("imageContainer");
+container.appendChild(img);
+                
+        });
+             
+    }
+
+      
+        function generateProphetForecast(){
+            fetch('/predict', {
+      method: 'GET'
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Extract data from JSON
+      const dsValues = Object.values(data.ds);
+      const labels = dsValues.map((value, index) => moment(value)); // Dates as labels using Moment.js
+      const predictions = Object.values(data.yhat);
+
+      // Create Chart.js chart
+      const ctx = document.getElementById('predictions-chart').getContext('2d');
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Predicted Values',
+            data: predictions,
+            borderColor: 'rgb(75, 192, 192)',
+            borderWidth: 1,
+            fill: false
+          }]
+        },
+        options: {
+          scales: {
+            x: {
+              type: 'time', // Specify x-axis as time
+              time: {
+                min: moment('2011-01-01'), // Minimum date using Moment.js
+                max: moment('2026-12-31'), // Maximum date using Moment.js
+                unit: 'year', // Display units by year
+                displayFormats: {
+                  year: 'YYYY' // Date format
+                }
+              }
+            },
+            y: {
+              // Add any y-axis options here
+            }
+          }
+        }
+      });
+    })
+    .catch(error => console.error('Error fetching predictions:', error));
+    d3.select("#imageContainer").selectAll("*").remove();
+        var img = document.createElement("img");
+
+// Set the source attribute to the URL of the image
+img.src = "static/prophet.jpg"; // Use forward slash here
+
+// Set any additional attributes such as alt text
+img.alt = "Image";
+
+// Append the <img> element to a container in the HTML document
+var container = document.getElementById("imageContainer");
+container.appendChild(img);
+                
+        
+        }
+      
+             
+        
+        const prophetButton = document.getElementById('prophetButton');
+       
+       // Add click event listener for Prophet
+       prophetButton.addEventListener('click', function() {
+           // Set the value of the hidden input field to "Prophet"
+           document.getElementById('selectedModelProphet').value = "Prophet";
+           // Submit the form
+           document.getElementById('modelFormProphet').submit();
+       });
+
+
+
+      
+        
+        // Add event listeners to the buttons after the page has loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('arimaButton').addEventListener('click', generateARIMAForecast);
+            document.getElementById('sarimaButton').addEventListener('click', generateSARIMAForecast);
+            document.getElementById('svrButton').addEventListener('click', generateSVRForecast);
+            document.getElementById('prophetButton').addEventListener('click', generateProphetForecast);
+            document.getElementById('etsButton').addEventListener('click', generateETSForecast);
+            document.getElementById('annButton').addEventListener('click', generateANNForecast);
+            document.getElementById('hybridButton').addEventListener('click', generateHYBRIDForecast);
+            document.getElementById('lstmButton').addEventListener('click', generateLSTMForecast);
+         
+
+        });
+        
+    </script>
+</body>
+</html>

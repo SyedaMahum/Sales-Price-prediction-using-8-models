@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plot with D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>Plot with D3.js</h1>
+    <div id="plot"></div>
+    <button onclick="plotData()">Plot Data</button>
+
+    <script>
+        function plotData() {
+            // Fetch data from Flask backend
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    // Data received, plot with D3.js
+                    const actualValues = data.actual;
+                    const predictedValues = data.predicted;
+
+                    // Define dimensions and margins for the plot
+                    const width = 600;
+                    const height = 400;
+                    const margin = { top: 20, right: 20, bottom: 30, left: 50 };
+
+                    // Create SVG element
+                    const svg = d3.select('#plot')
+                        .append('svg')
+                        .attr('width', width)
+                        .attr('height', height);
+
+                    // Create scales for x and y axes
+                    const xScale = d3.scaleLinear()
+                        .domain([0, actualValues.length - 1])
+                        .range([margin.left, width - margin.right]);
+
+                    const yScale = d3.scaleLinear()
+                        .domain([0, d3.max([...actualValues, ...predictedValues])])
+                        .range([height - margin.bottom, margin.top]);
+
+                    // Create line generator for actual values
+                    const lineActual = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Create line generator for predicted values
+                    const linePredicted = d3.line()
+                        .x((d, i) => xScale(i))
+                        .y(d => yScale(d));
+
+                    // Draw actual line
+                    svg.append('path')
+                        .datum(actualValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'steelblue')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', lineActual);
+
+                    // Draw predicted line
+                    svg.append('path')
+                        .datum(predictedValues)
+                        .attr('fill', 'none')
+                        .attr('stroke', 'red')
+                        .attr('stroke-width', 1.5)
+                        .attr('d', linePredicted);
+                });
+        }
+    </script>
+</body>
+</html>
